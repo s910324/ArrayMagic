@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>true</autorun>
+ <autorun-early>false</autorun-early>
+ <priority>0</priority>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text>import re
+import pya
+import math
+import numbers
+
+class PlaceHolder(pya.PCellDeclarationHelper):
+    def __init__(self):
+        super(PlaceHolder, self).__init__()
+        self.param("name",   self.TypeString,  "Name",             default = "")
+        self.param("base",   self.TypeLayer,   "Layer for Base",   default = pya.LayerInfo(1, 0))
+        self.param("arrow",  self.TypeLayer,   "Layer for Arrow",  default = pya.LayerInfo(1, 0))
+        self.param("fmark",  self.TypeLayer,   "Layer for F-mark", default = pya.LayerInfo(1, 0))
+
+        self.param("base_w", self.TypeDouble,  "Width",            default =  20, unit = "um")
+        self.param("base_h", self.TypeDouble,  "Height",           default =  10, unit = "um")
+        
+    def display_text_impl(self):
+        class_name  = self.__class__.__name__
+        custom_name = (self.name + "__" if self.name else "") 
+        disp_str    = "_%.2fx%.2f" % (self.base_w, self.base_h)
+
+        return "%s%s%s" % (custom_name, class_name, disp_str)
+    
+    def coerce_parameters_impl(self):          
+        unit            = self.layout.dbu
+        min_size        =  2 * unit
+        min_arrow_size  = 64 * unit
+        min_fmark_size  = 64 * unit
+        self.base_w     = min_size if self.base_w &lt;= min_size else self.base_w
+        self.base_h     = min_size if self.base_h &lt;= min_size else self.base_h
+        self.show_arrow = min_arrow_size &gt; min(self.base_w, self.base_h)
+        self.show_fmark = min_fmark_size &gt; min(self.base_w, self.base_h)
+
+    def can_create_from_shape_impl(self):
+        return self.shape.is_box() or self.shape.is_polygon() or self.shape.is_path()
+    
+    def parameters_from_shape_impl(self):
+        pass
+    
+    def transformation_from_shape_impl(self):
+        return pya.Trans(self.shape.bbox().center())
+        
+    def arrow_pts(self, x, y, size):
+        lw = size / 10 * 0.8
+
+        x0, x1, x2, x3, x4 = [ x - lw * 2, x - lw * 1, x, x + lw * 1, x + lw * 2]
+        y0, y1, y2,        = [ y + lw * 4, y, y - lw * 3]
+
+        return [
+            pya.DPoint(x0, y1), pya.DPoint(x2, y0), pya.DPoint(x4, y1), pya.DPoint(x3, y1), 
+            pya.DPoint(x3, y1), pya.DPoint(x3, y2), pya.DPoint(x1, y2), pya.DPoint(x1, y1), 
+            pya.DPoint(x0, y1),  
+        ]
+        
+    def fmark_pts(self, x, y, size):
+        lw = size / 10 * 0.8
+        
+        x0, x1, x2, x3     = [ x - lw * 2, x - lw * 1, x + lw * 1, x + lw * 2]
+        y0, y1, y2, y3, y4 = [ y - lw * 3, y, y + lw, y + lw * 3,  y + lw * 4]
+
+        return [
+            pya.DPoint(x0, y0), pya.DPoint(x0, y4), pya.DPoint(x3, y4), pya.DPoint(x3, y3), 
+            pya.DPoint(x1, y3), pya.DPoint(x1, y2), pya.DPoint(x2, y2), pya.DPoint(x2, y1), 
+            pya.DPoint(x1, y1), pya.DPoint(x1, y0), 
+        ]
+        
+    def produce_impl(self): 
+        pattern_size = min(self.base_w, self.base_h) * 0.8
+
+        base_rect = pya.DBox(
+            pya.DPoint( self.base_w/2,  self.base_h/2), 
+            pya.DPoint(-self.base_w/2, -self.base_h/2)
+        )
+        
+        self.cell.shapes(self.base_layer).insert(base_rect)
+
+        if not(self.show_arrow):
+            arrow_poly = pya.DPolygon(self.arrow_pts( 0, 0, pattern_size))
+            self.cell.shapes(self.arrow_layer).insert(arrow_poly)
+        
+        if not(self.show_fmark):
+            fmark_poly = pya.DPolygon(self.fmark_pts( 0, 0, pattern_size))
+            self.cell.shapes(self.fmark_layer).insert(fmark_poly)
+            
+class FunctionArray(pya.PCellDeclarationHelper):
+    def __init__(self):
+        super(FunctionArray, self).__init__()
+        self.param("name",   self.TypeString, "Name",                default = "")
+        self.param("base",   self.TypeLayer,  "Layer for Base",      default = pya.LayerInfo(1, 0))
+        self.param("arrow",  self.TypeLayer,  "Layer for Arrow",     default = pya.LayerInfo(1, 0))
+        self.param("fmark",  self.TypeLayer,  "Layer for F-mark",    default = pya.LayerInfo(1, 0))
+        self.param("text",   self.TypeLayer,  "Layer for info text", default = pya.LayerInfo(1, 0))
+        self.param("base_w", self.TypeDouble, "Width",               default =  20, unit = "um",              tooltip = "parameter: WIDTH")
+        self.param("base_h", self.TypeDouble, "Height",              default =  10, unit = "um",              tooltip = "parameter: HEIGHT")
+        self.param("row",    self.TypeInt,    "Row counts",          default =   5,                           tooltip = "parameter: ROWS")
+        self.param("col",    self.TypeInt,    "Column counts",       default =   5,                           tooltip = "parameter: COLS")
+        self.param("x_fun",  self.TypeString, "X position Function", default =  "COL * 20 + (COL ** 2 ) * 5", tooltip = "parameter: Xpos")
+        self.param("y_fun",  self.TypeString, "Y position Function", default =  "ROW * 20 + (ROW ** 2 ) * 5", tooltip = "parameter: Ypos")
+        self.param("r_fun",  self.TypeString, "Rotation   Function", default =  "(COL + Row) * 10",           tooltip = "parameter: ROT")
+        self.param("m_fun",  self.TypeString, "Mirror     Function", default =  "ROW % 2 == 0",               tooltip = "parameter: MIR")
+        self.param("v_fun",  self.TypeString, "Visibility Function", default =  "")
+        
+    def display_text_impl(self):
+        class_name  = self.__class__.__name__
+        custom_name = (self.name + "__" if self.name else "") 
+        disp_str    = "_%.2fx%.2f; R:%d, C:%d" % (self.base_w, self.base_h, self.row, self.col)
+
+        return "%s%s%s" % (custom_name, class_name, disp_str)
+    
+    def coerce_parameters_impl(self):          
+        unit            = self.layout.dbu
+        min_size        =  2 * unit
+        min_arrow_size  = 64 * unit
+        min_fmark_size  = 64 * unit
+        self.base_w     = min_size if self.base_w &lt;= min_size else self.base_w
+        self.base_h     = min_size if self.base_h &lt;= min_size else self.base_h
+        self.show_arrow = min_arrow_size &gt; min(self.base_w, self.base_h)
+        self.show_fmark = min_fmark_size &gt; min(self.base_w, self.base_h)
+        
+        self.row        = self.row if (self.row &gt; 0) else 1
+        self.col        = self.col if (self.col &gt; 0) else 1
+        
+        self.x_fun      = self.pre_process_str(self.x_fun, ignore = "xyrm")
+        self.y_fun      = self.pre_process_str(self.y_fun, ignore = "yrm")
+        self.r_fun      = self.pre_process_str(self.r_fun, ignore = "rm")
+        self.m_fun      = self.pre_process_str(self.m_fun, ignore = "m")
+        self.v_fun      = self.pre_process_str(self.v_fun, ignore = "")
+        
+    def pre_process_str(self, fun_str, ignore = ""):
+        fun_str = re.sub(r'\s+', ' ', fun_str.lower())
+        fun_str = fun_str.replace("true",   "True"  )
+        fun_str = fun_str.replace("false",  "False" )
+        fun_str = fun_str.replace("none",   "None"  )
+        fun_str = fun_str.replace("width",  "WIDTH" )
+        fun_str = fun_str.replace("height", "HEIGHT")
+        fun_str = fun_str.replace("rows",   "ROWS"  )
+        fun_str = fun_str.replace("row",    "ROW"   )
+        fun_str = fun_str.replace("cols",   "COLS"  )
+        fun_str = fun_str.replace("col",    "COL"   )
+        fun_str = fun_str.replace("xpos", "" if ("x" in ignore) else "Xpos")
+        fun_str = fun_str.replace("ypos", "" if ("y" in ignore) else "Ypos")
+        fun_str = fun_str.replace("rot",  "" if ("r" in ignore) else "ROT" )
+        fun_str = fun_str.replace("mir",  "" if ("m" in ignore) else "MIR" )
+        return fun_str
+  
+        
+    def can_create_from_shape_impl(self):
+        return self.shape.is_box() or self.shape.is_polygon() or self.shape.is_path()
+    
+    def parameters_from_shape_impl(self):
+        pass
+    
+    def transformation_from_shape_impl(self):
+        return pya.Trans(self.shape.bbox().center())
+        
+    def pcell(self, layout, lib_name, pcell_name, x, y, angle, mirror, pcell_parameters, va, vb, na, nb):
+        unit       = layout.dbu
+        lib        = pya.Library.library_by_name(lib_name)
+        pcell_decl = lib.layout().pcell_declaration(pcell_name)
+        pcell_var  = layout.add_pcell_variant(lib, pcell_decl.id(), pcell_parameters) 
+        return pya.CellInstArray(pcell_var, pya.DCplxTrans (1.0, angle, mirror, x, y ), va, vb, na, nb)
+        
+    def post_process_str(self, fun_str, width, height, rows, cols, row, col, x = "", y="", r="", m=""):
+        fun_str = fun_str.lower()
+        fun_str = fun_str.replace("true",   "True" )
+        fun_str = fun_str.replace("false",  "False")
+        fun_str = fun_str.replace("none",   "None" )
+        fun_str = fun_str.replace("width",  str(width))
+        fun_str = fun_str.replace("height", str(height))
+        fun_str = fun_str.replace("rows",   str(rows))
+        fun_str = fun_str.replace("cols",   str(cols))
+        fun_str = fun_str.replace("row",    str(row))
+        fun_str = fun_str.replace("col",    str(col))
+        fun_str = fun_str.replace("xpos",   f"({x})")
+        fun_str = fun_str.replace("ypos",   f"({y})")
+        fun_str = fun_str.replace("rot",    f"({r})")
+        fun_str = fun_str.replace("mir",    f"({m})")
+        return fun_str
+        
+    def produce_impl(self): 
+        counts   = 0
+        um       = 1/ self.layout.dbu
+        rows     = self.row
+        cols     = self.col
+
+        init_x   =     0 if (self.x_fun == "") else None
+        init_y   =     0 if (self.y_fun == "") else None
+        init_r   =     0 if (self.r_fun == "") else None
+        init_m   = False if (self.m_fun == "") else None
+        init_v   = True  if (self.v_fun == "") else None
+        param    = ["", self.base, self.arrow, self.fmark, self.base_w, self.base_h]
+        
+        errors   = {
+            "xerror" : None,
+            "yerror" : None,
+            "rerror" : None,
+            "merror" : None,
+            "verror" : None,
+        }
+        
+        for row in range(self.row):
+            for col in range(self.col):
+            
+                x, y, r, m, v = init_x, init_y, init_r, init_m, init_v
+                
+
+                if (x is None):
+                    xcode = self.post_process_str(self.x_fun, self.base_w, self.base_h, self.row, self.col, row, col)
+                    try:
+                        x = eval(xcode)
+                        x = x if isinstance(x, numbers.Number) else 0
+                    except:
+                        x = 0
+                        if not(errors["xerror"]):
+                            errors["xerror"] = xcode
+                        
+                if (y is None):
+                    ycode = self.post_process_str(self.y_fun, self.base_w, self.base_h, self.row, self.col, row, col, x)
+                    try:
+                        y = eval(ycode)
+                        y = y if isinstance(y, numbers.Number) else 0
+                    except:
+                        y = 0
+                        if not(errors["yerror"]):
+                            errors["yerror"] = ycode
+                        
+                if (r is None):
+                    rcode = self.post_process_str(self.r_fun, self.base_w, self.base_h, self.row, self.col, row, col, x, y)
+                    try:
+                        r = eval(rcode)
+                        r = r if isinstance(r, numbers.Number) else 0
+                    except:
+                        r = 0
+                        if not(errors["rerror"]):
+                            errors["rerror"] = rcode
+                        
+                if (m is None):
+                    mcode = self.post_process_str(self.m_fun, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r)
+                    try:
+                        m = eval(mcode)
+                        m = m if isinstance(m, bool) else False
+                    except:
+                        m = False
+                        if not(errors["merror"]):
+                            errors["merror"] = mcode
+                
+                r = (r + 180 )if m else r
+                
+                if (v is None):
+                    vcode = self.post_process_str(self.v_fun, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
+                    try:
+                        v = eval(vcode)
+                        v = v if isinstance(v, bool) else True
+                    except:
+                        v = True
+                        if not(errors["verror"]):
+                            errors["verror"] = vcode
+                        
+                if v : 
+                    base_pcell = self.pcell(self.layout, "ArrayMagic", "PlaceHolder",  x * um, y * um, r, m, param, pya.Vector(0, 0), pya.Vector(0, 0), 0, 0)
+                    self.cell.insert(base_pcell)
+                    counts = counts + 1
+        
+        
+        info = "\n".join([
+            f"ArrayMagic", 
+            f"item counts: {counts}",
+            f"Xpos error : {errors['xerror']}" if errors["xerror"] else "",
+            f"Ypos error : {errors['yerror']}" if errors["yerror"] else "",
+            f"ROT  error : {errors['rerror']}" if errors["rerror"] else "",
+            f"MIR  error : {errors['merror']}" if errors["merror"] else "",
+            f"VIS  error : {errors['verror']}" if errors["verror"] else "",
+        ])
+        
+        self.cell.shapes(self.text_layer).insert(pya.DText(info, 0.0, 0.0))
+        if counts == 0:
+            self.cell.shapes(self.text_layer).insert(pya.DBox(10, 10))
+        
+class ArrayMagic(pya.Library):
+  def __init__(self):
+    self.description = "ArrayMagic"
+    self.layout().register_pcell("PlaceHolder",     PlaceHolder())
+    self.layout().register_pcell("FunctionArray",   FunctionArray())
+    self.register("ArrayMagic")
+
+ArrayMagic()
+
+</text>
+</klayout-macro>
