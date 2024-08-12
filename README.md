@@ -13,6 +13,8 @@ An example gds can be found under forder `Example`
 # Function and parameters
 
 ### Fields:
+![image](https://github.com/user-attachments/assets/ada7d5d5-258d-429f-8dbf-b2c861087d36)
+
 * Function fields utilize python `evals` to process the value, single line of python script can be accepted.
 * The returned value will be taked as the assigned value to field.
 * Only generic type of function and data type is supported, oythin library `math` is also supported.
