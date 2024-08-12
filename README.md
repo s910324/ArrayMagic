@@ -8,31 +8,35 @@ https://www.klayout.de/forum/discussion/2572/
 
 # Use case and example
 An example gds can be found under forder `Example`
+![image](https://github.com/user-attachments/assets/267cf6b6-cec5-4265-b6b3-8b985fdc3345)
 
 # Function and parameters
 
 ### Fields:
-1. Function fields utilize python `evals` to process the value, single line of python script can be accepted.
-2. The returned value will be taked as the assigned value to field.
-3. Only generic type of function and data type is supported, oythin library `math` is also supported.
-4. Looping using list comprehension and ternary operation is allowed.
-5. Looping through element in row-column order, and the function field is evaluated and assigned in top to bottom order
-6. Default value will be applyed it script failed to ececute.
+* Function fields utilize python `evals` to process the value, single line of python script can be accepted.
+* The returned value will be taked as the assigned value to field.
+* Only generic type of function and data type is supported, oythin library `math` is also supported.
+* Looping using list comprehension and ternary operation is allowed.
+* Looping through element in row-column order, and the function field is evaluated and assigned in top to bottom order
+* Default value will be applyed it script failed to ececute.
 
-* X position function [`Float`, default = 0    ] : 
-  _ Assign current element X location by function return value, in a unit of `um`.
 
-* Y position function [`Float`, default = 0    ] : 
-  _ Assign current element Y location by function return value, in a unit of `um`.
+1. X position function [`Float`, default = 0    ] :
+   - Assign current element X location by function return value, in a unit of `um`.
 
-* Rotation   function [`Float`, default = 0    ] : 
-  _ Assign current element rotation by function return value, in a unit of `degreed`.
+2. Y position function [`Float`, default = 0    ] :
+   - Assign current element Y location by function return value, in a unit of `um`.
 
-* Mirror     function [`Bool`,  default = False] : 
-  _ Assign current element mirror by function return value, takes a boolean value.
+3. Rotation   function [`Float`, default = 0    ] : 
+   - Assign current element rotation by function return value, in a unit of `degreed`.
 
-* VIsibility function [`Bool`,  default = False] : 
-  _ Assign whether insert current element to layout, takes a boolean value.
+4. Mirror     function [`Bool`,  default = False] : 
+   - Assign current element mirror by function return value, takes a boolean value.
+
+5. VIsibility function [`Bool`,  default = False] : 
+   - Assign whether insert current element to layout, takes a boolean value.
+
+
 
 ### parameters:
 * `WIDTH` : Array element width value applied from pcell panel
