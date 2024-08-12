@@ -12,28 +12,27 @@ An example gds can be found under forder `Example`
 # Function and parameters
 
 ### Fields:
-* Function fields utilize python `evals` to process the value, single line of python script can be accepted.
-* The returned value will be taked as the assigned value to field.
-* Only generic type of function and data type is supported, oythin library `math` is also supported.
-* Looping using list comprehension and ternary operation is allowed.
+1. Function fields utilize python `evals` to process the value, single line of python script can be accepted.
+2. The returned value will be taked as the assigned value to field.
+3. Only generic type of function and data type is supported, oythin library `math` is also supported.
+4. Looping using list comprehension and ternary operation is allowed.
+5. Looping through element in row-column order, and the function field is evaluated and assigned in top to bottom order
+6. Default value will be applyed it script failed to ececute.
 
-* Looping through element in row-column order, and the function field is evaluated and assigned in top to bottom order
-* Default value will be applyed it script failed to ececute.
+* X position function [`Float`, default = 0    ] : 
+  _ Assign current element X location by function return value, in a unit of `um`.
 
-#### X position function [`Float`, default = 0    ] : 
-+ assign current element X location by function return value, in a unit of `um`.
+* Y position function [`Float`, default = 0    ] : 
+  _ Assign current element Y location by function return value, in a unit of `um`.
 
-#### Y position function [`Float`, default = 0    ] : 
-+ assign current element Y location by function return value, in a unit of `um`.
+* Rotation   function [`Float`, default = 0    ] : 
+  _ Assign current element rotation by function return value, in a unit of `degreed`.
 
-#### Rotation   function [`Float`, default = 0    ] : 
-+ assign current element rotation by function return value, in a unit of `degreed`.
+* Mirror     function [`Bool`,  default = False] : 
+  _ Assign current element mirror by function return value, takes a boolean value.
 
-#### Mirror     function [`Bool`,  default = False] : 
-+ assign current element mirror by function return value, takes a boolean value.
-
-#### VIsibility function [`Bool`,  default = False] : 
-+ assign whether insert current element to layout, takes a boolean value.
+* VIsibility function [`Bool`,  default = False] : 
+  _ Assign whether insert current element to layout, takes a boolean value.
 
 ### parameters:
 * `WIDTH` : Array element width value applied from pcell panel
