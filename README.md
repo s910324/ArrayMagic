@@ -53,4 +53,9 @@ An example gds can be found under forder `Example`
 * `MIR`   : Current element calculated Mirror, avaliable for field  Visibility, (Mirrior to Y-axis)
 
 
+### Replacement:
+* The `FunctionArray` cell places a series of `PlaceHolder` cells by customize defined script.
+* The `PlaceHolder` cells can be replaced to desired cells, by converting the `FunctionArray` PCELL into a static cell can and make the replacement permanent.
+* Due to PCell refreshes and regenerated components on update, change to static prevents this update but also means you lose the ability to tweek the array.
+
 
