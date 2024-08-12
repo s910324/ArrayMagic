@@ -1,0 +1,2 @@
+# ArrayMagic
+KLayout Array template
