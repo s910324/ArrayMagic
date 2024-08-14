@@ -1,25 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
-<klayout-macro>
- <description/>
- <version/>
- <category>pymacros</category>
- <prolog/>
- <epilog/>
- <doc/>
- <autorun>true</autorun>
- <autorun-early>false</autorun-early>
- <priority>0</priority>
- <shortcut/>
- <show-in-menu>false</show-in-menu>
- <group-name/>
- <menu-path/>
- <interpreter>python</interpreter>
- <dsl-interpreter-name/>
- <text>import re
+import re
 import pya
 import math
 import numbers
 
+from asteval import Interpreter
 
 class PlaceHolder(pya.PCellDeclarationHelper):
     def __init__(self):
@@ -50,8 +34,8 @@ class PlaceHolder(pya.PCellDeclarationHelper):
         min_size        =  2 * unit
         min_arrow_size  = 64 * unit
         min_fmark_size  = 64 * unit
-        self.show_arrow = min_arrow_size &gt; min(self.base_w, self.base_h)
-        self.show_fmark = min_fmark_size &gt; min(self.base_w, self.base_h)
+        self.show_arrow = min_arrow_size > min(self.base_w, self.base_h)
+        self.show_fmark = min_fmark_size > min(self.base_w, self.base_h)
 
     def parameters_from_shape_impl(self):
         pass
@@ -122,8 +106,8 @@ class LabeledPlaceHolder(pya.PCellDeclarationHelper):
     def coerce_parameters_impl(self):          
         unit            = self.layout.dbu
         min_size        =  2 * unit
-        self.base_w     = min_size if self.base_w &lt;= min_size else self.base_w
-        self.base_h     = min_size if self.base_h &lt;= min_size else self.base_h
+        self.base_w     = min_size if self.base_w <= min_size else self.base_w
+        self.base_h     = min_size if self.base_h <= min_size else self.base_h
 
 
     def can_create_from_shape_impl(self):
@@ -184,13 +168,13 @@ class FunctionArray(pya.PCellDeclarationHelper):
         min_size        =  2 * unit
         min_arrow_size  = 64 * unit
         min_fmark_size  = 64 * unit
-        self.base_w     = min_size if self.base_w &lt;= min_size else self.base_w
-        self.base_h     = min_size if self.base_h &lt;= min_size else self.base_h
-        self.show_arrow = min_arrow_size &gt; min(self.base_w, self.base_h)
-        self.show_fmark = min_fmark_size &gt; min(self.base_w, self.base_h)
+        self.base_w     = min_size if self.base_w <= min_size else self.base_w
+        self.base_h     = min_size if self.base_h <= min_size else self.base_h
+        self.show_arrow = min_arrow_size > min(self.base_w, self.base_h)
+        self.show_fmark = min_fmark_size > min(self.base_w, self.base_h)
         
-        self.row        = self.row if (self.row &gt; 0) else 1
-        self.col        = self.col if (self.col &gt; 0) else 1
+        self.row        = self.row if (self.row > 0) else 1
+        self.col        = self.col if (self.col > 0) else 1
         
         self.x_fun      = self.pre_process_str(self.x_fun, ignore = "xyrm")
         self.y_fun      = self.pre_process_str(self.y_fun, ignore = "yrm")
@@ -213,12 +197,14 @@ class FunctionArray(pya.PCellDeclarationHelper):
             "ypos"   : "" if ("y" in ignore) else "Ypos", 
             "rot"    : "" if ("r" in ignore) else "ROT", 
             "mir"    : "" if ("m" in ignore) else "MIR", 
-            "pya"    : "",
+            "pya."   : "",
+            "math."  : "",
+
         }
         for k in kwards:
             fun_str = re.sub(rf'({k})', kwards[k], fun_str, flags=re.IGNORECASE)
             
-        return fun_str
+        return fun_str.strip()
   
         
     def can_create_from_shape_impl(self):
@@ -230,157 +216,95 @@ class FunctionArray(pya.PCellDeclarationHelper):
     def transformation_from_shape_impl(self):
         return pya.Trans(self.shape.bbox().center())
         
-    def pcell(self, layout, lib_name, pcell_name, x, y, angle, mirror, pcell_parameters, va, vb, na, nb):
-        unit       = layout.dbu
-        lib        = pya.Library.library_by_name(lib_name)
-        pcell_decl = lib.layout().pcell_declaration(pcell_name)
-        pcell_var  = layout.add_pcell_variant(lib, pcell_decl.id(), pcell_parameters) 
-        return pya.CellInstArray(pcell_var, pya.DCplxTrans (1.0, angle, mirror, x, y ), va, vb, na, nb)
+    def pcell_lbph(self, x, y, angle, mirror, label_txt):
+        unit       = self.layout.dbu
+        um         = 1 / unit
+        lib        = pya.Library.library_by_name("ArrayMagic")
+        pcell_decl = lib.layout().pcell_declaration("LabeledPlaceHolder")
+        param      = ["", self.base, self.arrow, self.fmark, self.text, self.base_w, self.base_h, label_txt]
+        pcell_var  = self.layout.add_pcell_variant(lib, pcell_decl.id(), param) 
+        return pya.CellInstArray(pcell_var, pya.DCplxTrans (1.0, angle, mirror, x * um, y * um), pya.Vector(0, 0), pya.Vector(0, 0), 0, 0)
         
-    def post_process_str(self, fun_str, width, height, rows, cols, row, col, x = 0, y=0, r=0, m=False):
-        params = { 
-            "WIDTH"  : width, 
-            "HEIGHT" : height,
-            "ROWS"   : rows,
-            "ROW"    : row,
-            "COLS"   : cols,
-            "COL"    : col,
-            "Xpos"   : x, 
-            "Ypos"   : y, 
-            "ROT"    : r, 
-            "MIR"    : m, 
-        }
         
-        for p in params:
-            fun_str = re.sub(rf'({p})', f"({params[p]})", fun_str)
-            
-        return fun_str
+    def post_process_str(self, aeval, width, height, rows, cols, row, col, x = 0, y=0, r=0, m=False):
+        aeval.symtable["WIDTH" ] = width
+        aeval.symtable["HEIGHT"] = height
+        aeval.symtable["ROWS"  ] = rows
+        aeval.symtable["ROW"   ] = row
+        aeval.symtable["COLS"  ] = cols
+        aeval.symtable["COL"   ] = col
+        aeval.symtable["Xpos"  ] = x
+        aeval.symtable["Ypos"  ] = y
+        aeval.symtable["ROT"   ] = r
+        aeval.symtable["MIR"   ] = m
+         
+    def eval_string(self, variable, default_value, aeval, variable_code, error_stat):
+        check_type = numbers.Number if type(default_value) in [int, float] else type(default_value)
 
+        if (variable is None):
+            eval_value = aeval(variable_code)
+            variable   = eval_value if isinstance(eval_value, check_type ) else default_value
 
+            if len(aeval.error) > 0:
+                variable = default_value
+                error_stat = variable_code if not(error_stat) else error_stat
+
+        return variable, error_stat
         
     def produce_impl(self): 
         counts   = 0
-        um       = 1/ self.layout.dbu
         rows     = self.row
         cols     = self.col
-
+        aeval    = Interpreter()
         init_x   =     0 if (self.x_fun == "") else None
         init_y   =     0 if (self.y_fun == "") else None
         init_r   =     0 if (self.r_fun == "") else None
         init_m   = False if (self.m_fun == "") else None
         init_v   = True  if (self.v_fun == "") else None
         init_l   =    "" if (self.l_fun == "") else None
-        param    = ["", self.base, self.arrow, self.fmark, self.text, self.base_w, self.base_h, ""]
-        
-        errors   = {
-            "xerror" : None,
-            "yerror" : None,
-            "rerror" : None,
-            "merror" : None,
-            "verror" : None,
-            "lerror" : None,
-        }
-        
+        errors   = {"x_error" : "", "y_error" : "", "r_error" : "", "m_error" : "", "v_error" : "", "l_error" : ""}
+
         for row in range(self.row):
             for col in range(self.col):
-            
                 x, y, r, m, v, l = init_x, init_y, init_r, init_m, init_v, init_l
                 
-
-                if (x is None):
-                    xcode = self.post_process_str(self.x_fun, self.base_w, self.base_h, self.row, self.col, row, col)
-                    try:
-                        x = eval(xcode)
-                        x = x if isinstance(x, numbers.Number) else 0
-                    except:
-                        x = 0
-                        if not(errors["xerror"]):
-                            errors["xerror"] = self.x_fun
-                        
-                if (y is None):
-                    ycode = self.post_process_str(self.y_fun, self.base_w, self.base_h, self.row, self.col, row, col, x)
-                    try:
-                        y = eval(ycode) 
-                        y = y if isinstance(y, numbers.Number) else 0
-                    except:
-                        y = 0
-                        if not(errors["yerror"]):
-                            errors["yerror"] = self.y_fun
-                        
-                if (r is None):
-                    rcode = self.post_process_str(self.r_fun, self.base_w, self.base_h, self.row, self.col, row, col, x, y)
-                    try:
-                        r = eval(rcode) 
-                        r = r if isinstance(r, numbers.Number) else 0
-                    except:
-                        r = 0
-                        if not(errors["rerror"]):
-                            errors["rerror"] = self.r_fun
-                        
-                if (m is None):
-                    mcode = self.post_process_str(self.m_fun, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r)
-                    try:
-                        m = eval(mcode) 
-                        m = m if isinstance(m, bool) else False
-                    except:
-                        m = False
-                        if not(errors["merror"]):
-                            errors["merror"] = self.m_fun
+                self.post_process_str(aeval, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
+                x, errors["x_error"] = self.eval_string(x,   0.0, aeval, self.x_fun, errors["x_error"])
                 
-                r = (r + 180 )if m else r
+                self.post_process_str(aeval, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
+                y, errors["y_error"] = self.eval_string(y,   0.0, aeval, self.y_fun, errors["y_error"])
                 
-                if (v is None):
-                    vcode = self.post_process_str(self.v_fun, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
-                    try:
-                        v = eval(vcode) 
-                        v = v if isinstance(v, bool) else True
-                    except:
-                        v = True
-                        if not(errors["verror"]):
-                            errors["verror"] = vcode
-                            
-                if (l is None):
-                    lcode = self.post_process_str(self.l_fun, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
-                    try:
-                        l = eval(lcode) 
-                        l = l if isinstance(l, str) else ""
-                    except:
-                        l = ""
-                        if not(errors["lerror"]):
-                            errors["lerror"] = self.l_fun
-                            
+                self.post_process_str(aeval, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
+                r, errors["r_error"] = self.eval_string(r,   0.0, aeval, self.r_fun, errors["r_error"])
+                
+                self.post_process_str(aeval, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
+                m, errors["m_error"] = self.eval_string(m, False, aeval, self.m_fun, errors["m_error"])
+                
+                self.post_process_str(aeval, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
+                v, errors["v_error"] = self.eval_string(v,  True, aeval, self.v_fun, errors["v_error"])
+                
+                self.post_process_str(aeval, self.base_w, self.base_h, self.row, self.col, row, col, x, y, r, m)
+                l, errors["l_error"] = self.eval_string(l,    "", aeval, self.l_fun, errors["l_error"])
+                
+                
                 if v : 
-                    param[-1]  = l
-                    base_pcell = self.pcell(self.layout, "ArrayMagic", "LabeledPlaceHolder",  x * um, y * um, r, m, param, pya.Vector(0, 0), pya.Vector(0, 0), 0, 0)
-                    self.cell.insert(base_pcell)
+                    self.cell.insert(self.pcell_lbph( x, y , r, m, l))
                     counts = counts + 1
         
         
         info = "\n".join([
             f"ArrayMagic", 
             f"item  counts: {counts}",
-            f"Xpos  error : {errors['xerror']}" if errors["xerror"] else "",
-            f"Ypos  error : {errors['yerror']}" if errors["yerror"] else "",
-            f"ROT   error : {errors['rerror']}" if errors["rerror"] else "",
-            f"MIR   error : {errors['merror']}" if errors["merror"] else "",
-            f"VIS   error : {errors['verror']}" if errors["verror"] else "",
-            f"Label error : {errors['lerror']}" if errors["lerror"] else "",
+            f"Xpos  error : {errors['x_error']}" if errors["x_error"] else "",
+            f"Ypos  error : {errors['y_error']}" if errors["y_error"] else "",
+            f"ROT   error : {errors['r_error']}" if errors["r_error"] else "",
+            f"MIR   error : {errors['m_error']}" if errors["m_error"] else "",
+            f"VIS   error : {errors['v_error']}" if errors["v_error"] else "",
+            f"Label error : {errors['l_error']}" if errors["l_error"] else "",
         ])
         
         self.cell.shapes(self.text_layer).insert(pya.DText(info, 0.0, 0.0))
         if counts == 0:
             self.cell.shapes(self.text_layer).insert(pya.DBox(10, 10))
 
-        
-class ArrayMagic(pya.Library):
-  def __init__(self):
-    self.description = "ArrayMagic"
-    self.layout().register_pcell("PlaceHolder",        PlaceHolder())
-    self.layout().register_pcell("LabeledPlaceHolder", LabeledPlaceHolder())
-    self.layout().register_pcell("FunctionArray",      FunctionArray())
-    self.register("ArrayMagic")
 
-ArrayMagic()
-
-</text>
-</klayout-macro>
