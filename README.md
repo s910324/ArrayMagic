@@ -3,7 +3,7 @@ KLayout Array template, inspired by fourms post :
 https://www.klayout.de/forum/discussion/2572/
 
 # Installation and setup
-* This package works as a KLayout PCell plugin, installation can be done byy placing the main scrip file `Lib_ArrayMagic.lym` under folder path `~\KLayout\pymacros\`
+* This package works as a KLayout PCell plugin, installation can be done by placing the main scrip file `Lib_ArrayMagic.lym` under folder path `~\KLayout\pymacros\`
 * After installation, an `FunctionArray` PCell can be accessed from application toolbar `Instance` --> Library `ArrayMagic` --> cell `FunctionArray`
 
 # Use case and example
@@ -15,13 +15,12 @@ An example gds can be found under forder `Example`
 ### Fields:
 ![image](https://github.com/user-attachments/assets/ada7d5d5-258d-429f-8dbf-b2c861087d36)
 
-* Function fields utilize python `evals` to process the value, single line of python script can be accepted.
+* Function fields utilize package `ASTEVAL` to process the value, single line of python script can be accepted.
 * The returned value will be taked as the assigned value to field.
-* Only generic type of function and data type is supported, oythin library `math` is also supported.
+* Only generic type of function and data type is supported, pythin library `math` is also supported.
 * Looping using list comprehension and ternary operation is allowed.
 * Looping through element in row-column order, and the function field is evaluated and assigned in top to bottom order
-* Default value will be applyed it script failed to ececute.
-
+* Default value will be applyed it script failed to execute.
 
 1. X position function [`Float`, default = 0    ] :
    - Assign current element X location by function return value, in a unit of `um`.
@@ -35,10 +34,11 @@ An example gds can be found under forder `Example`
 4. Mirror     function [`Bool`,  default = False] : 
    - Assign current element mirror by function return value, takes a boolean value.
 
-5. VIsibility function [`Bool`,  default = False] : 
+5. Visibility function [`Bool`,  default = False] : 
    - Assign whether insert current element to layout, takes a boolean value.
 
-
+6. Label function [`str`,  default = ""] : 
+   - Assign additional labeling to further devide cells into groups for ease of replacement.
 
 ### parameters:
 * `WIDTH` : Array element width value applied from pcell panel
