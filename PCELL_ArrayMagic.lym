@@ -55,6 +55,5 @@ class ArrayMagic(pya.Library):
     self.layout().register_pcell("FunctionArray",      FunctionArray())
     self.register("ArrayMagic")
 
-ArrayMagic()
-</text>
+ArrayMagic()</text>
 </klayout-macro>
