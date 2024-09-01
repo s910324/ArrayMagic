@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <priority>0</priority>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text>import os
+import sys
+import pya
+from   importlib import reload  
+
+libPath  = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "python"))
+iconPath = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "icon"))
+
+if not libPath in sys.path:
+  sys.path.insert(0, libPath)
+  
+import util_CsvImport
+import util_CsvPCell
+import ui_CSVArrayWidget
+
+def rld():
+    from   importlib import reload
+    reload(util_CsvImport)
+    reload(util_CsvPCell)
+    reload(ui_CSVArrayWidget)
+
+rld()
+
+mainWindow    = pya.Application.instance().main_window()
+def callCSVArrayWidget():
+    widget        = ui_CSVArrayWidget.CSVArrayWidget()
+    widget.show()
+
+              
+def bindMenu_CSVArrayWidgets():
+    menu            = pya.MainWindow.instance().menu()
+    action          = pya.Action()
+    action.title    = "CSV Array"
+    action.tool_tip = "CSV Array"
+    action.icon     = iconPath + "\icon.png"
+    action.on_triggered(lambda : callCSVArrayWidget())
+    menu.insert_item("@toolbar.end", "CSV Array", action) 
+     
+bindMenu_CSVArrayWidgets()</text>
+</klayout-macro>

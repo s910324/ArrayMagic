@@ -25,11 +25,24 @@ class CSVArray(pya.PCellDeclarationHelper):
         self.param("save3",       self.TypeString,   "Saved data 1000-1500",   default =  "", )# hidden = True )
         self.param("save4",       self.TypeString,   "Saved data 1500-2000",   default =  "", )# hidden = True )
         self.init_setup()
-
+    '''    
+    def wants_lazy_evaluation(self):
+        return True
+    '''  
+    def produce(self, *args, **kwargs):
+    
+        #if not (self.update_gds):
+        #    return
+            
+        super(CSVArray, self).produce(*args, **kwargs)
+        
+        
+        print("X", *args, **kwargs)
         
     def init_setup(self):
         self.trigger_load_csv = False
         self.trigger_clear    = False
+        self.update_gds       = False
         self.validator   = {
             "x"      : {"required" :  True, "dtype" : "float32",  "low" : -1E6, "high" :  1E6, "default" :    0}, 
             "y"      : {"required" :  True, "dtype" : "float32",  "low" : -1E6, "high" :  1E6, "default" :    0}, 
@@ -37,7 +50,7 @@ class CSVArray(pya.PCellDeclarationHelper):
             "height" : {"required" :  True, "dtype" : "float32",  "low" :    0, "high" :  1E6, "default" :    0}, 
             "rotate" : {"required" : False, "dtype" : "float32",  "low" : -1E6, "high" :  1E6, "default" :    0}, 
             "mirror" : {"required" : False, "dtype" :    "bool",  "low" : None, "high" : None, "default" :False}, 
-            "hide"   : {"required" : False, "dtype" :    "bool",  "low" : None, "high" : None, "default" :False}, 
+            #"hide"   : {"required" : False, "dtype" :    "bool",  "low" : None, "high" : None, "default" :False}, 
             #"label"  : {"required" : False, "dtype" :  "string",  "low" : None, "high" : None, "default" :   ""}, 
         }
         self.header_list  = list(self.validator.keys())
@@ -111,9 +124,11 @@ class CSVArray(pya.PCellDeclarationHelper):
             self.save2      = chunk_df_str[1]
             self.save3      = chunk_df_str[2]
             self.save4      = chunk_df_str[3]
+            data_len        = 0 if (df is None) else len(df)
             self.trigger_load_csv = False
             self.check_data_status()
-            print(f"fetched {len(df)}  data from disk", self.source)
+            
+            print(f"fetched {data_len}  data from disk", self.source)
             print("SAVE1", self.save1)
             print("SAVE2", self.save2)
             print("SAVE3", self.save3)
@@ -182,8 +197,10 @@ class CSVArray(pya.PCellDeclarationHelper):
     def chop_data(self, df, chunk_size, chunk_max):
         chunk_count  = int(chunk_max/chunk_size)
         chunk_df_str = { i : "" for i in range(chunk_count)}
-        chunk_max    = min(chunk_max, len(df))
         
+        if (df is None) : return chunk_df_str
+            
+        chunk_max = min(chunk_max, len(df) )
         for i in range(chunk_count):
             chunk_df_str[i] = df.loc[i * chunk_size : (i+1) * chunk_size - 1:] .to_csv(index=False)
             
@@ -222,7 +239,6 @@ class CSVArray(pya.PCellDeclarationHelper):
 
         for i in range(df.shape[0]):
             row_data = df.iloc[i]
-            if row_data["hide"] : continue
             self.cell.insert(self.pcell_lbph(row_data["x"], row_data["y"], row_data["width"], row_data["height"], row_data["rotate"], row_data["mirror"]))
             
     def produce_impl(self): 

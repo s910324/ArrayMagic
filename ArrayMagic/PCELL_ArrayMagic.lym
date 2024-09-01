@@ -27,30 +27,38 @@ if not importPath in sys.path:
 # asteval midified from source : https://lmfit.github.io/asteval
 import astutils
 import asteval
-import Lib_ArrayMagic
-import Lib_CSVArray
+import Lib_ArrayMagic_RectHolder
+import Lib_ArrayMagic_PlaceHolder
+import Lib_ArrayMagic_LabeledPlaceHolder
+import Lib_ArrayMagic_FunctionArray
+
 
 def rld():
     from   importlib import reload 
     reload(astutils)
     reload(asteval)
-    reload(Lib_ArrayMagic)
-    reload(Lib_CSVArray)
+    reload(Lib_ArrayMagic_RectHolder)
+    reload(Lib_ArrayMagic_PlaceHolder)
+    reload(Lib_ArrayMagic_LabeledPlaceHolder)
+    reload(Lib_ArrayMagic_FunctionArray)
+
 rld()
 
 from astutils       import *
 from asteval        import *
-from Lib_ArrayMagic import PlaceHolder, LabeledPlaceHolder, FunctionArray
-from Lib_CSVArray   import CSVArray
+from Lib_ArrayMagic_RectHolder         import RectHolder
+from Lib_ArrayMagic_PlaceHolder        import PlaceHolder
+from Lib_ArrayMagic_LabeledPlaceHolder import LabeledPlaceHolder
+from Lib_ArrayMagic_FunctionArray      import FunctionArray
 
         
 class ArrayMagic(pya.Library):
   def __init__(self):   
     self.description = "ArrayMagic"
+    self.layout().register_pcell("RectHolder",         RectHolder())
     self.layout().register_pcell("PlaceHolder",        PlaceHolder())
     self.layout().register_pcell("LabeledPlaceHolder", LabeledPlaceHolder())
     self.layout().register_pcell("FunctionArray",      FunctionArray())
-    self.layout().register_pcell("CSVArray",           CSVArray())
     self.register("ArrayMagic")
 
 ArrayMagic()</text>
