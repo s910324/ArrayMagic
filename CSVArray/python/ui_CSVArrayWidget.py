@@ -6,9 +6,12 @@ from util_CsvPCell           import *
 class CSVArrayWidget(pya.QWidget):
     def __init__(self, parent = None):
         super(CSVArrayWidget, self).__init__()
+        self.lv           = None
+        self.cv           = None
+        self.ly           = None
         self.processStart = False
-        self.importer = CsvImport()
-        self.injector = CsvPCell(self)
+        self.importer     = CsvImport()
+        self.injector     = CsvPCell(self)
         self.initUI()
         self.initSignal()
         self.setWindowTitle("import CSV data")
@@ -18,22 +21,22 @@ class CSVArrayWidget(pya.QWidget):
         self.status_edit    = pya.QTextEdit()
         self.get_file_pb    = pya.QPushButton("...")
         self.import_pb      = pya.QPushButton("Start Import")
-        self.layout         = pya.QGridLayout()
+        self.grid           = pya.QGridLayout()
         self.progress       = pya.QProgressBar()
                 
-        self.layout.addWidget(pya.QLabel("csv File path:"), 0, 0, 1, 1)
+        self.grid.addWidget(pya.QLabel("csv File path:"), 0, 0, 1, 1)
         
-        self.layout.addWidget(self.file_name_edit, 0, 1, 1, 1)
-        self.layout.addWidget(self.get_file_pb,    0, 2, 1, 1)
-        self.layout.addWidget(self.status_edit,    1, 0, 1, 3)
-        self.layout.addWidget(self.progress,       2, 0, 1, 3)
-        self.layout.addWidget(self.import_pb,      3, 0, 1, 3)
+        self.grid.addWidget(self.file_name_edit, 0, 1, 1, 1)
+        self.grid.addWidget(self.get_file_pb,    0, 2, 1, 1)
+        self.grid.addWidget(self.status_edit,    1, 0, 1, 3)
+        self.grid.addWidget(self.progress,       2, 0, 1, 3)
+        self.grid.addWidget(self.import_pb,      3, 0, 1, 3)
 
         self.progress.setValue(0)
-        self.layout.setColumnMinimumWidth(0, 70)
-        self.layout.setColumnStretch(1, 1)
-        self.layout.setRowStretch(1, 1)
-        self.setLayout(self.layout)
+        self.grid.setColumnMinimumWidth(0, 70)
+        self.grid.setColumnStretch(1, 1)
+        self.grid.setRowStretch(1, 1)
+        self.setLayout(self.grid)
 
         self.get_file_pb.setFixedWidth(35)
         self.file_name_edit.setReadOnly (True)
@@ -58,13 +61,15 @@ class CSVArrayWidget(pya.QWidget):
                 
     def layoutValidate(self):
         try:
-            lv      = pya.Application.instance().main_window().current_view()
-            cv      = lv.active_cellview()
-            layout  = cv.layout()
-            return lv, cv, layout
+            self.lv = pya.Application.instance().main_window().current_view()
+            self.cv = self.lv.active_cellview()
+            self.ly = self.cv.layout()
+            
         except :
-            return None, None, None
-    
+            self.lv = None
+            self.cv = None
+            self.ly = None
+            
     def trigger(self):
         if self.processStart == True:
             self.cancelProcess()
@@ -72,17 +77,16 @@ class CSVArrayWidget(pya.QWidget):
             self.startProcess()
             
     def insertCell(self):
-        lv, cv, layout = self.layoutValidate()
-        if any([(self.importer.df is None), (layout is None)]) : return
-
-        cell       = layout.create_cell("CSVArray")
-        cv.cell    = cell
-        xmin, xmax = self.importer.df['x'].agg(['min', 'max'])
-        ymin, ymax = self.importer.df['y'].agg(['min', 'max'])
-        lv.zoom_box(pya.DBox(pya.DPoint(xmin, ymin), pya.DPoint(xmax, ymax)))
-        self.injector.startProcess(cell, self.importer.df)
+        if any([(self.importer.df is None), (self.importer.placement_type is None), (self.ly is None)]) : return
+        cell         = self.ly.create_cell("CSVArray")
+        self.cv.cell = cell
+        xmin, xmax   = self.importer.df['x'].agg(['min', 'max'])
+        ymin, ymax   = self.importer.df['y'].agg(['min', 'max'])
+        self.lv.zoom_box(pya.DBox(pya.DPoint(xmin, ymin), pya.DPoint(xmax, ymax)))
+        self.injector.startProcess(cell, self.importer.df, self.importer.placement_type)
     
     def startProcess(self):
+        self.layoutValidate()
         self.insertCell()
     
     def cancelProcess(self):
@@ -100,6 +104,7 @@ class CSVArrayWidget(pya.QWidget):
         
     def updateProgress(self, progress):
         self.progress.setValue(progress)
+        self.lv.add_missing_layers()
         pya.Application.instance().processEvents()
         
     def enableUI(self, enable):
