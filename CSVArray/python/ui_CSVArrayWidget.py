@@ -2,6 +2,10 @@ import pya
 
 from util_CsvImport          import *
 from util_CsvPCell           import *
+import logging
+log = logging.getLogger('CSVArrayWidget')
+log.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 class CSVArrayWidget(pya.QWidget):
     def __init__(self, parent = None):
@@ -41,6 +45,9 @@ class CSVArrayWidget(pya.QWidget):
         self.get_file_pb.setFixedWidth(35)
         self.file_name_edit.setReadOnly (True)
         self.status_edit.setReadOnly (True)
+        self.status_edit.setFont(pya.QFont('Consolas', 8))
+        self.resize(pya.QSize(600, 600))
+ 
     
     def initSignal(self):
         self.get_file_pb.clicked.connect(self.load)
@@ -50,9 +57,12 @@ class CSVArrayWidget(pya.QWidget):
                       
     def load(self):
         path = pya.QFileDialog.getOpenFileName(filter = "*csv")
-
+        log.debug(f"Path Loaded : {path}")
+        
         if path:
             with open(path, 'rb') as f:
+                log.debug(f"Path opened : {path}")
+                print(self.importer)
                 self.importer.open_csv(path)
                 self.file_name_edit.setText(path)
                 self.status_edit.setText(str(self.importer.df))

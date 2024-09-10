@@ -5,6 +5,10 @@ import numpy as np
 import pandas as pd
 from util_CsvImport          import *
 
+log = logging.getLogger('CsvImport')
+log.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
+
 class CsvPCell(object):
     def __init__(self, ui = None):
         super(CsvPCell, self).__init__()
@@ -30,9 +34,10 @@ class CsvPCell(object):
         self.cell_placer(layout, cell, item, x, y, rotate, mirror)
 
     def place_text(self, layout, cell, text, layer, datatype, x, y):
+        x, y, layer, datatype = float(x), float(y), int(layer), int(datatype)
         ly_id   = layout.layer(layer, datatype)
         ly_info = layout.get_info(ly_id)
-        cell.shapes(ly_info).insert(pya.DText(text, x, y))
+        cell.shapes(ly_id).insert(pya.DText(text, x, y))
     
     def cell_placer(self, layout, cell, item, x, y, r, m):
         x, y, r, m = float(x), float(y), float(r), float(m)
@@ -65,7 +70,7 @@ class CsvPCell(object):
             "text"        : lambda params : self.place_text       (** params),
             "cell"        : lambda params : self.place_cell       (** params),
         }[placement_type]
-
+        log.debug(f"item_placer {placement_type}")
         for i in range(row):
             if self.abort : break
             if (i % seg) == 0 : self.updateProgress(i / row * 100)
@@ -100,7 +105,7 @@ if __name__ == "__main__":
     layout   = cv.layout()
     i        = CsvImport()
     p        = CsvPCell()
-    path     = r"C:\Users\scott\KLayout\pymacros\Library\ArrayMagic\Examples\pcell_shape_1.csv"
+    path     = r"C:\Users\User\My Drive\Porotech\Project M\Delorean\MTK\text_MTK_Bump_location_20240906 - Copy.csv"
     cell     = layout.create_cell("CSVArray")
     i.open_csv(path)
-    p.startProcess(cell, i.df)
+    p.startProcess(cell, i.df, "text")

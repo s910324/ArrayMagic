@@ -3,6 +3,11 @@ import pya
 import datetime
 import numpy as np
 import pandas as pd
+import logging
+
+log = logging.getLogger('CsvImport')
+log.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 class CsvImport(object):
     def __init__(self):
@@ -14,6 +19,8 @@ class CsvImport(object):
         self.cell           = None
         self.df             = None
         self.placement_type = None
+        self.validator      = {}
+        self.header_list    = []
         self.warning        = ""
         self.error          = ""
 
@@ -57,42 +64,46 @@ class CsvImport(object):
             "datatype" : {"required" : False, "dtype" :   "int32",  "low" :    0, "high" :  1E4, "default" :    0},  
             "x"        : {"required" :  True, "dtype" : "float32",  "low" : -1E6, "high" :  1E6, "default" :    0}, 
             "y"        : {"required" :  True, "dtype" : "float32",  "low" : -1E6, "high" :  1E6, "default" :    0}, 
-        }     
-        
-        self.validator    = self.pcell_shape_validator
-        self.header_list  = list(self.validator.keys())
-        self.dtype_table  = {self.validator[header]["dtype"] for header in self.validator}
+        }   
+          
+        self.validators   = {
+            "pcell_shape" : self.pcell_text_validator,
+            "pcell_text"  : self.pcell_shape_validator,
+            "cell"        : self.cell_validator,
+            "text"        : self.text_validator,
+        }
+
         self.bool_table   = {"TRUE" : True, "FALSE" : False, "1" : True, "0" : False} 
     
     def setValidator(self, f_path):  
         fname = os.path.basename(f_path).lower()
         self.placement_type = None
-        if fname.startswith("pcell_shape"):
-            self.placement_type = "pcell_shape"
-            self.validator = self.pcell_shape_validator
-            
-        elif fname.startswith("pcell_text"):
-            self.placement_type = "pcell_text"
-            self.validator = self.pcell_text_validator
-            
-        elif fname.startswith("cell"):
-            self.placement_type = "cell"
-            self.validator = self.cell_validator
-            
-        elif fname.startswith("text"):  
-            self.placement_type = "text"
-            self.validator = self.text_validator
-
+        print("OK")
+        for placement_type in self.validators.keys():
+            if fname.startswith(placement_type):
+                self.placement_type = placement_type
+                self.validator = self.validators[placement_type]
+                self.header_list = list(self.validator.keys())
+                log.debug(f"validator set to : {placement_type}")
+                break
         else:
-            self.validator = None
+            log.debug(f"file_name does not contain validator string")
+            self.validator = {}
         
             
     def open_csv(self, f_path):
+        
+        
         if f_path is None : return None, None, None
+        
+        log.debug(f"Path Loaded : {f_path}")
+        
+        self.setValidator(f_path)
         df = pd.read_csv(f_path)
         df = df.filter(items = self.header_list)
-        self.setValidator(f_path)
+        log.debug(f"CSV Load to dataframe")
         self.df, self.warning, self.error = self.process_raw_csv(df)
+        log.debug(f"dataframe value coerce")
     
     def process_raw_csv(self, df):
         error_msgs   = []     
@@ -130,15 +141,19 @@ class CsvImport(object):
                 default     = self.validator[header]["default"]
                 df[header]  = default
                 (error_msgs if required else warning_msgs).append(f"field : {header}, error : {e}")
-                
+        
+        log.debug(f"warning {warning_msgs}")
+        log.debug(f"error {error_msgs}")
         return df, ",".join(warning_msgs), ",".join(error_msgs)
 
 
 
 if __name__ == "__main__": 
-    path = r"C:\Users\scott\KLayout\pymacros\Library\ArrayMagic\Examples\pcell_text_1.csv"
+    path = r"C:\Users\User\My Drive\Porotech\Project M\Delorean\MTK\text_MTK_Bump_location_20240906 - Copy.csv"
     i    = CsvImport()
-    print(i.open_csv(path))
+    i.open_csv(path)
+
+    print(i.df)
 
      
 
