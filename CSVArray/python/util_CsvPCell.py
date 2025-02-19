@@ -5,9 +5,10 @@ import numpy as np
 import pandas as pd
 from util_CsvImport          import *
 
-log = logging.getLogger('CsvImport')
+import logging
+log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
-logging.basicConfig(level=logging.DEBUG)
+
 
 class CsvPCell(object):
     def __init__(self, ui = None):
@@ -37,6 +38,7 @@ class CsvPCell(object):
         x, y, layer, datatype = float(x), float(y), int(layer), int(datatype)
         ly_id   = layout.layer(layer, datatype)
         ly_info = layout.get_info(ly_id)
+        print(f"{cell} {text} {x}, {y},  {ly_id}")
         cell.shapes(ly_id).insert(pya.DText(text, x, y))
     
     def cell_placer(self, layout, cell, item, x, y, r, m):
@@ -51,6 +53,8 @@ class CsvPCell(object):
         return layout.get_info(ly_id)
         
     def startProcess(self, cell, df, placement_type):
+
+        print(f"startProcess {cell}, {placement_type}")
         self.updateProgress(0)    
         
         if any( [ (i is None) for i in [ df, cell] ] ) : 
@@ -70,13 +74,15 @@ class CsvPCell(object):
             "text"        : lambda params : self.place_text       (** params),
             "cell"        : lambda params : self.place_cell       (** params),
         }[placement_type]
-        log.debug(f"item_placer {placement_type}")
+        print(f"item_placer {placement_type} {row} {self.abort}")
         for i in range(row):
             if self.abort : break
             if (i % seg) == 0 : self.updateProgress(i / row * 100)
             params = dict(df.iloc[i]) | {"layout" : layout, "cell" : cell}
             item_placer(params)
-        self.finishProcess()  
+            print(f"{i}")
+        self.finishProcess()
+        print("F")  
 
     def proceedProcess(self):
         if self.ui:
@@ -105,7 +111,11 @@ if __name__ == "__main__":
     layout   = cv.layout()
     i        = CsvImport()
     p        = CsvPCell()
-    path     = r"C:\Users\User\My Drive\Porotech\Project M\Delorean\MTK\text_MTK_Bump_location_20240906 - Copy.csv"
+    folder   = r"C:\Users\User\My Drive\Porotech\Project M\Delorean\MTK"
+    t        = r"text_MTK_Bump_location_20240906 - Copy.csv"
+    s        = r"pcell_shape_MTK_Bump_location_20240906.csv"
+    path     = rf"{f}\{s}"
     cell     = layout.create_cell("CSVArray")
     i.open_csv(path)
-    p.startProcess(cell, i.df, "text")
+    log.warning(f"N")
+    p.startProcess(cell, i.df, "pcell_shape")

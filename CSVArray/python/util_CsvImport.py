@@ -149,7 +149,10 @@ class CsvImport(object):
 
 
 if __name__ == "__main__": 
-    path = r"C:\Users\User\My Drive\Porotech\Project M\Delorean\MTK\text_MTK_Bump_location_20240906 - Copy.csv"
+    folder   = r"C:\Users\User\My Drive\Porotech\Project M\Delorean\MTK"
+    t        = r"text_MTK_Bump_location_20240906 - Copy.csv"
+    s        = r"pcell_shape_MTK_Bump_location_20240906.csv"
+    path     = rf"{folder}\{s}"
     i    = CsvImport()
     i.open_csv(path)
 
